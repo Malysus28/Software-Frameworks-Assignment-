@@ -1,0 +1,32 @@
+<div class="container" style="max-width: 380px; margin-top: 32px">
+  <h2>Login</h2>
+  <!-- login form -->
+  <form (ngSubmit)="login()" #f="ngForm">
+    <!-- email -->
+    <div class="mb-3">
+      <label>Email</label>
+      <input
+        class="form-control"
+        type="email"
+        [(ngModel)]="email"
+        name="email"
+      />
+    </div>
+    <!-- errormessage hidden/display -->
+    <div [hidden]="!errorMessage" class="alert alert-danger mt-2">
+      {{ errorMessage }}
+    </div>
+    <!-- password -->
+    <div class="mb-3">
+      <label>Password</label>
+      <input
+        class="form-control"
+        type="password"
+        [(ngModel)]="password"
+        name="password"
+      />
+    </div>
+    <!-- submit button -->
+    <button class="btn btn-primary w-100" type="submit">Login</button>
+  </form>
+</div>
