@@ -6,5 +6,5 @@ import { Component } from '@angular/core';
   templateUrl: './profile.html',
   styleUrl: './profile.css',
 })
-// profile is the fucking file name not the component name!
+// profile is the file name not the component name!
 export class Profile {}
