@@ -17,28 +17,38 @@ export class Login implements OnInit {
 
   constructor(private router: Router) {}
 
-  ngOnInit() {
-    this.users = [
-      { email: 'bella@gmail.com', password: '123' },
-      { email: 'alex@gmail.com', password: '123' },
-      { email: 'malees@gmail.com', password: '123' },
-    ];
-  }
+  ngOnInit() {}
 
   login() {
-    let Userfound = false;
+    console.log('test');
+    // fetch is communicating with the back end, using the post method
 
-    for (let u of this.users) {
-      if (u.email === this.email && u.password === this.password) {
-        Userfound = true;
-        break;
-      }
-    }
-
-    if (Userfound) {
-      this.router.navigate(['/profile']);
-    } else {
-      this.errorMessage = 'Invalid email or password';
-    }
+    fetch('http://localhost:3000/api/auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: this.email,
+        password: this.password,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok ' + response.status);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log('Success:', data);
+        if (data.ok) {
+          this.router.navigate(['/profile']);
+        } else {
+          this.errorMessage = data.message;
+        }
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
   }
 }
