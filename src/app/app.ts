@@ -9,4 +9,15 @@ import { Navbar } from '../navbar/navbar';
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {}
+export class App {
+  // ngOnInit() {
+  //   console.log('test if DOM is ready');
+  //   if (typeof Storage !== 'undefined') {
+  //     console.log('storage is ready');
+  //     localStorage.setItem('lastname', 'Smith');
+  //     console.log('lastname is set to ' + localStorage.getItem('lastname'));
+  //   } else {
+  //     console.log('storage is not available');
+  //   }
+  // }
+}
