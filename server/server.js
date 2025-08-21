@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// very simple User "class"
+// User class defined
 class User {
   constructor(username, birthdate, age, email, password, valid) {
     this.username = username;
@@ -20,24 +20,26 @@ class User {
 
 // hard-coded users (this is our fake database)
 var users = [
-  new User("Bella", "2001-05-20", 24, "b@gmail.com", "123", true),
-  new User("Alex", "2000-11-02", 24, "alex@gmail.com", "123", true),
-  new User("Malees", "1998-08-15", 27, "malees@gmail.com", "123", true),
+  new User("Bella", "2001-05-20", 10, "b@gmail.com", "123", true),
+  new User("Alex", "2000-11-02", 5, "alex@gmail.com", "123", true),
+  new User("Malees", "1998-08-15", 3, "malees@gmail.com", "123", true),
 ];
 
-// POST /api/auth  check login
+// define the POST endpoint at api/auth
 app.post("/api/auth", function (req, res) {
-  console.log("POST /api/auth", req.body);
+  // console.log("POST /api/auth", req.body);
+  // contains data sent from front end email and password in req.body
   var email = req.body && req.body.email ? req.body.email : "";
   var password = req.body && req.body.password ? req.body.password : "";
 
+  // error message when email is missing
   if (!email || !password) {
     return res
       .status(400)
       .json({ ok: false, message: "Email and password required" });
   }
 
-  // simple loop to find a match
+  // loop through users to find a match and case sensitive when found take it and store it in foundUser variable
   var foundUser = null;
   for (var i = 0; i < users.length; i++) {
     var u = users[i];
@@ -49,12 +51,11 @@ app.post("/api/auth", function (req, res) {
       break;
     }
   }
-
+  // if not found user, then error message
   if (!foundUser) {
     return res.status(401).json({ ok: false, message: "Invalid credentials" });
   }
 
-  // don’t send the password back
   var safeUser = {
     username: foundUser.username,
     birthdate: foundUser.birthdate,

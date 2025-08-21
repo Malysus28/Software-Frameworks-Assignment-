@@ -1,13 +1,80 @@
 <p class="profile">Profile Page</p>
-
+<!-- bootstrap card profile  -->
 <div class="card" style="width: 18rem">
   <img src="./Dog.jpg" class="card-img-top" alt="..." />
   <div class="card-body">
-    <h5 class="card-title">Hello</h5>
-    <p class="card-text">
-      Some quick example text to build on the card title and make up the bulk of
-      the cards content.
-    </p>
-    <!-- <a href="#" class="btn btn-primary">Go somewhere</a> -->
+    <h5 class="card-title">Hello {{ user.username }}</h5>
   </div>
+  <!-- list items retrieved from the storage -->
+  <div *ngIf="user">
+    <ul class="list-group" style="max-width: 480px">
+      <li class="list-group-item"><b>Username:</b> {{ user.username }}</li>
+      <li class="list-group-item"><b>Birthdate:</b> {{ user.birthdate }}</li>
+      <li class="list-group-item"><b>Age:</b> {{ user.age }}</li>
+      <li class="list-group-item"><b>Email:</b> {{ user.email }}</li>
+    </ul>
+  </div>
+</div>
+<!-- update info section(form) -->
+<h3>Update Profile Info</h3>
+<div style="max-width: 22rem; margin-top: 1rem">
+  <form (ngSubmit)="save()">
+    <div class="mb-2">
+      <label>Username</label>
+      <input
+        class="form-control"
+        name="username"
+        [(ngModel)]="formUser.username"
+      />
+    </div>
+
+    <div class="mb-2">
+      <label>Birthdate</label>
+      <input
+        class="form-control"
+        type="date"
+        name="birthdate"
+        [(ngModel)]="formUser.birthdate"
+      />
+    </div>
+
+    <div class="mb-2">
+      <label>Age</label>
+      <input
+        class="form-control"
+        type="number"
+        name="age"
+        [(ngModel)]="formUser.age"
+      />
+    </div>
+
+    <div class="mb-2">
+      <label>Email</label>
+      <input
+        class="form-control"
+        type="email"
+        name="email"
+        [(ngModel)]="formUser.email"
+      />
+    </div>
+
+    <div class="mb-2">
+      <label>Password</label>
+      <input
+        class="form-control"
+        type="password"
+        name="password"
+        [(ngModel)]="formUser.password"
+      />
+    </div>
+
+    <button class="btn btn-primary" type="submit">Save</button>
+    <button class="btn btn-secondary ms-2" type="button" (click)="reset()">
+      Reset
+    </button>
+
+    <div class="alert alert-success mt-3" [hidden]="!savedMsg">
+      {{ savedMsg }}
+    </div>
+  </form>
 </div>
