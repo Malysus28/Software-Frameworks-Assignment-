@@ -10,7 +10,7 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './profile.css',
 })
 export class Profile implements OnInit {
-  user: any = null; // what's shown in the card
+  user: any = null;
   formUser: any = {
     // editable variables for the form
     username: '',
@@ -52,7 +52,6 @@ export class Profile implements OnInit {
 
   // reset form
   reset(): void {
-    //to clear when reset is clicked
     this.formUser = {
       username: '',
       birthdate: '',
@@ -60,5 +59,10 @@ export class Profile implements OnInit {
       email: '',
       valid: false,
     };
+  }
+  showForm = false;
+
+  toggleEdit() {
+    this.showForm = !this.showForm;
   }
 }

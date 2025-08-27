@@ -1,1 +1,22 @@
-<p>chats works!</p>
+<div class="container mt-4">
+  <h3>Chat</h3>
+  <h6>Channel name</h6>
+
+  <!-- Show messages -->
+  <div class="border p-3 mb-3" style="height: 200px; overflow-y: auto">
+    <p *ngFor="let msg of messages">{{ msg }}</p>
+  </div>
+
+  <!-- Input box -->
+  <form (ngSubmit)="sendMessage()" class="d-flex">
+    <input
+      type="text"
+      class="form-control me-2"
+      placeholder="Type a message..."
+      [(ngModel)]="newMessage"
+      name="message"
+      required
+    />
+    <button type="submit" class="btn btn-primary">Send</button>
+  </form>
+</div>
