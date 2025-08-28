@@ -1,59 +1,119 @@
+<!-- super admin stuff  -->
 <div class="container mt-4">
-  <h3>Super Admin: User Management</h3>
+  <h3>
+    <!-- based on the userrole change the heading sitiation  -->
+    <ng-container *ngIf="user?.roles?.includes('super-admin'); else groupAdmin">
+      Super Admin: User Management
+    </ng-container>
+    <ng-template #groupAdmin> Group Admin: Group Management </ng-template>
+  </h3>
+  <div class="container mt-4">
+    <button
+      class="btn btn-outline-secondary mb-3"
+      (click)="fetchAllUsers()"
+      [disabled]="loadingUsers"
+    >
+      {{ loadingUsers ? "Loading…" : "Refresh Users" }}
+    </button>
 
-  <div *ngIf="errMsg" class="alert alert-danger my-2">{{ errMsg }}</div>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Roles</th>
+            <th>Groups</th>
+            <th *ngIf="isSuperAdmin()" style="width: 300px">Actions</th>
+            <!-- <th *ngIf="isGroupAdmin()" style="width: 300px">Actions</th> -->
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of allUsers">
+            <td>{{ u.username }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.roles.join(", ") }}</td>
+            <td>{{ (u.groups || []).join(", ") || "—" }}</td>
+            <td *ngIf="isSuperAdmin()">
+              <div class="btn-group btn-group-sm">
+                <button
+                  class="btn btn-outline-primary"
+                  (click)="promoteToGroupAdmin(u)"
+                  [disabled]="u.roles.includes('group-admin')"
+                >
+                  Promote to Group Admin
+                </button>
+                <button
+                  class="btn btn-outline-warning"
+                  (click)="promoteToSuperAdmin(u)"
+                  [disabled]="u.roles.includes('super-admin')"
+                >
+                  Promote to Super Admin
+                </button>
+                <button class="btn btn-outline-danger" (click)="removeUser(u)">
+                  Remove
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!loadingUsers && allUsers?.length === 0">
+            <td [attr.colspan]="isSuperAdmin() ? 5 : 4" class="text-muted">
+              No users to display.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-  <button
-    class="btn btn-outline-secondary mb-3"
-    (click)="fetchAllUsers()"
-    [disabled]="loadingUsers"
-  >
-    {{ loadingUsers ? "Loading…" : "Refresh Users" }}
-  </button>
+  <!-- if it is a group admin this is shown -->
 
-  <div class="table-responsive">
-    <table class="table table-sm align-middle">
-      <thead>
-        <tr>
-          <th>Username</th>
-          <th>Email</th>
-          <th>Roles</th>
-          <th>Groups</th>
-          <th style="width: 300px">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let u of allUsers">
-          <td>{{ u.username }}</td>
-          <td>{{ u.email }}</td>
-          <td>{{ u.roles.join(", ") }}</td>
-          <td>{{ (u.groups || []).join(", ") || "—" }}</td>
-          <td>
-            <div class="btn-group btn-group-sm">
-              <button
-                class="btn btn-outline-primary"
-                (click)="promoteToGroupAdmin(u)"
-                [disabled]="u.roles.includes('group-admin')"
-              >
-                Promote to Group Admin
-              </button>
-              <button
-                class="btn btn-outline-warning"
-                (click)="promoteToSuperAdmin(u)"
-                [disabled]="u.roles.includes('super-admin')"
-              >
-                Promote to Super Admin
-              </button>
-              <button class="btn btn-outline-danger" (click)="removeUser(u)">
-                Remove
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr *ngIf="!loadingUsers && allUsers?.length === 0">
-          <td colspan="5" class="text-muted">No users to display.</td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="card mt-3" *ngIf="user?.roles?.includes('group-admin')">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Create a Group</h5>
+      <!-- input form  -->
+      <form (ngSubmit)="createGroup()" class="d-flex gap-2">
+        <input
+          class="form-control"
+          placeholder="New group name…"
+          [(ngModel)]="newGroupName"
+          name="groupName"
+          required
+        />
+        <button class="btn btn-primary" type="submit">Create</button>
+      </form>
+
+      <hr class="my-3" />
+
+      <h6 class="mb-2">
+        My Groups
+        <span *ngIf="groupsLoading" class="text-muted">loading…</span>
+      </h6>
+      <ul class="list-group">
+        <li
+          class="list-group-item d-flex justify-content-between align-items-center"
+          *ngFor="let g of myGroups"
+        >
+          <span>
+            {{ g.name }} <span class="text-muted">({{ g.id }})</span>
+          </span>
+          <!-- ADD: simple delete button -->
+          <button
+            class="btn btn-sm btn-outline-danger"
+            *ngIf="canDeleteGroup(g)"
+            class="btn btn-sm btn-outline-danger"
+            (click)="deleteGroup(g)"
+          >
+            Delete
+          </button>
+        </li>
+        <li
+          class="list-group-item text-muted"
+          *ngIf="!groupsLoading && !myGroups.length"
+        >
+          No groups yet.
+        </li>
+      </ul>
+    </div>
   </div>
 </div>

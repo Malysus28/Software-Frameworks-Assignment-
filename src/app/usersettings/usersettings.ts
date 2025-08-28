@@ -29,6 +29,11 @@ export class UserSettings implements OnInit {
   loadingUsers = false;
   errMsg = '';
 
+  // group admin state
+  newGroupName = '';
+  myGroups: Array<{ id: string; name: string; createdBy: string }> = [];
+  groupsLoading = false;
+
   constructor(private http: HttpClient, private router: Router) {}
 
   ngOnInit(): void {
@@ -44,15 +49,23 @@ export class UserSettings implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
-
-    if (!this.isSuperAdmin()) {
+    // if user is neither super-admin nor group-admin send them away
+    if (!this.isSuperAdmin() && !this.isGroupAdmin()) {
       this.router.navigate(['/profile']);
       return;
     }
-
-    this.fetchAllUsers();
+    // Only super-admins and group admins should load the users table:
+    if (this.isSuperAdmin() || this.isGroupAdmin()) {
+      this.fetchAllUsers();
+    }
+    // Group admins can manage groups:
+    if (this.isGroupAdmin()) {
+      this.loadMyGroups();
+    }
   }
-
+  isGroupAdmin(): boolean {
+    return !!this.user?.roles?.includes('group-admin');
+  }
   isSuperAdmin(): boolean {
     return !!this.user?.roles?.includes('super-admin');
   }
@@ -82,7 +95,7 @@ export class UserSettings implements OnInit {
         },
       });
   }
-
+  // to promote group admin function situation
   promoteToGroupAdmin(target: SafeUser): void {
     const actor = this.actorId();
     if (!actor) return;
@@ -137,5 +150,84 @@ export class UserSettings implements OnInit {
         },
         error: (e) => alert(e?.error?.error || 'Remove failed'),
       });
+  }
+  // group admin stuff
+  loadMyGroups(): void {
+    const actor = this.actorId();
+    if (!actor) return;
+
+    this.groupsLoading = true;
+    this.http
+      .get<any[]>('http://localhost:3000/api/groups', {
+        params: { userId: actor },
+      })
+      .subscribe({
+        next: (list) => {
+          // this.myGroups = list.map((g) => ({ id: g.id, name: g.name }));
+          this.myGroups = list.map((g) => ({
+            id: g.id,
+            name: g.name,
+            createdBy: g.createdBy,
+          }));
+          this.groupsLoading = false;
+        },
+        error: () => (this.groupsLoading = false),
+      });
+  }
+
+  createGroup(): void {
+    const actor = this.actorId();
+    if (!actor) return;
+
+    const name = this.newGroupName.trim();
+    if (!name) return;
+
+    this.http
+      .post<{ ok: boolean; group: any }>(
+        'http://localhost:3000/api/groups',
+        { name },
+        { params: { actorId: actor } }
+      )
+      .subscribe({
+        next: (res) => {
+          this.newGroupName = '';
+          this.myGroups.push({
+            id: res.group.id,
+            name: res.group.name,
+            createdBy: res.group.createdBy ?? (this.user?.id || ''),
+          });
+        },
+        error: (e) => alert(e?.error?.error || 'Create group failed'),
+      });
+  }
+
+  // delete group for group admin
+  deleteGroup(g: { id: string; name: string; createdBy: string }): void {
+    const actor = this.user?.id;
+    if (!actor) return;
+
+    // ✅ only allow creator to proceed
+    if (!this.canDeleteGroup(g)) {
+      alert('You can only delete groups you created.');
+      return;
+    }
+
+    if (!confirm(`Delete group "${g.name}"?`)) return;
+
+    this.http
+      .delete<{ ok: boolean }>(`http://localhost:3000/api/groups/${g.id}`, {
+        params: { actorId: actor },
+      })
+      .subscribe({
+        next: () => {
+          this.myGroups = this.myGroups.filter((x) => x.id !== g.id);
+        },
+        error: (e) => alert(e?.error?.error || 'Delete group failed'),
+      });
+  }
+
+  // only creator can delete group
+  canDeleteGroup(g: { createdBy: string }): boolean {
+    return this.user?.id === g.createdBy; // only the creator can delete
   }
 }

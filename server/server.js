@@ -238,8 +238,8 @@ app.get("/api/groups/:gid/channels", (req, res) => {
 
 app.get("/api/users", (req, res) => {
   const actor = getActor(req);
-  if (!actor || !isSuperAdmin(actor)) {
-    return res.status(403).json({ error: "Forbidden: super admin only" });
+  if (!actor || (!isSuperAdmin(actor) && !isGroupAdmin(actor))) {
+    return res.status(403).json({ error: "Forbidden" });
   }
   return res.json(users.map(toSafeUser));
 });
@@ -353,4 +353,42 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
+});
+// GROUP ADMIN STUFF
+function nextId(prefix, arr) {
+  const nums = arr
+    .map((x) => Number(String(x.id).replace(`${prefix}`, "")))
+    .filter((n) => !Number.isNaN(n));
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `${prefix}${max + 1}`;
+}
+
+/**
+ * POST /api/groups
+ * body: { name: string }
+ * query/header: actorId (must be a group-admin)
+ */
+app.post("/api/groups", (req, res) => {
+  const actor = getActor(req);
+  if (!actor || !isGroupAdmin(actor)) {
+    return res.status(403).json({ error: "Forbidden: group admin only" });
+  }
+
+  const name = String(req.body?.name || "").trim();
+  if (!name) return res.status(400).json({ error: "Group name required" });
+
+  // create the group, with the creator set as admin & member
+  const newGroup = {
+    id: nextId("g", groups),
+    name,
+    createdBy: actor.id,
+    adminIds: [actor.id],
+    memberIds: [actor.id],
+  };
+  groups.push(newGroup);
+
+  // also reflect in the user’s groups list (optional but nice)
+  if (!actor.groups.includes(newGroup.id)) actor.groups.push(newGroup.id);
+
+  return res.json({ ok: true, group: newGroup });
 });
