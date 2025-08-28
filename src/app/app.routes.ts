@@ -27,4 +27,5 @@ export const routes: Routes = [
     component: Channels,
     title: 'Channels',
   },
+  { path: 'groups/:groupId/channels/:channelId', component: Chats },
 ];

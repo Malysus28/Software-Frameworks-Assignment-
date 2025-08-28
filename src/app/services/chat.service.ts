@@ -45,4 +45,9 @@ export class ChatService implements OnDestroy {
       this.socket?.disconnect();
     } catch {}
   }
+  leave() {
+    if (this.socket) {
+      this.socket.emit('leave');
+    }
+  }
 }

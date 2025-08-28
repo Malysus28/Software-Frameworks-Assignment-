@@ -1,4 +1,3 @@
-// server/server.js
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -106,17 +105,18 @@ const groups = [
     memberIds: ["u-100", "u-101"], // Bella, Alex
   },
 ];
-
+// channels
 const channels = [
-  { id: "c1", groupId: "g1", name: "general" },
-  { id: "c2", groupId: "g1", name: "ui-ux" },
+  { id: "c1", groupId: "g1", name: "Web App Dev 3004ICT" },
+  { id: "c2", groupId: "g1", name: "Software Frameworks 3813ICT" },
+  { id: "c3", groupId: "g1", name: "Work Integrated Learning 3821ICT" },
+  { id: "c4", groupId: "g1", name: "The Ethical Technologist 3410ICT" },
+  { id: "c5", groupId: "g1", name: "Interaction Design 3723ICT" },
+  { id: "c6", groupId: "g1", name: "Creative Coding 1701ICT" },
 ];
 
-// ===== NEW: accept both u1/u-100 style IDs =====
 const ALIAS = { u1: "u-100", u2: "u-101", u3: "u-102" };
 const canonUserId = (id) => ALIAS[id] || id;
-
-// ===== REST =====
 
 // POST /api/auth  { email, password }
 app.post("/api/auth", (req, res) => {
@@ -226,6 +226,13 @@ io.on("connection", (socket) => {
     io.to(room).emit("system", {
       text: `${user.username} joined ${channel.name}`,
     });
+  });
+
+  socket.on("leave", () => {
+    if (socket.data?.room) {
+      socket.leave(socket.data.room);
+      socket.data.room = null;
+    }
   });
 
   socket.on("message", ({ text }) => {
