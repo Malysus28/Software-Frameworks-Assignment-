@@ -215,7 +215,7 @@ io.on("connection", (socket) => {
     if (!user || !group || !channel) return;
 
     const isMember =
-      group.memberIds.includes(uid) || group.adminIds.includes(uid); // NEW
+      group.memberIds.includes(uid) || group.adminIds.includes(uid);
     if (!isMember) return;
 
     const room = `${groupId}:${channelId}`;

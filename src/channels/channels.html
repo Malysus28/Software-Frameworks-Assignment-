@@ -8,10 +8,7 @@
     grow, and succeed as a community.
   </p>
   <hr class="my-4" />
-  <p>
-    It uses utility classes for typography and spacing to space content out
-    within the larger container.
-  </p>
+  <p>Select the channel you would like to join.</p>
 </div>
 
 <!-- channel 1  -->
@@ -26,7 +23,9 @@
         PHP, Laravel, and SQLite. Together we can make tackling web apps easier.
       </p>
     </div>
-    <button type="button" class="btn btn-dark">chat</button>
+    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c1')">
+      chat
+    </button>
   </div>
   <!-- channel 2 -->
   <div class="card text-white bg-danger mb-3" style="width: 22rem">
@@ -54,7 +53,7 @@
         project management, documentation, and client communication.
       </p>
     </div>
-    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c1')">
+    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c3')">
       chat
     </button>
   </div>
@@ -71,7 +70,7 @@
         assignments on responsible innovation.
       </p>
     </div>
-    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c1')">
+    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c4')">
       chat
     </button>
   </div>
@@ -86,7 +85,7 @@
         journeys or usability testing, this is your creative hub
       </p>
     </div>
-    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c1')">
+    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c5')">
       chat
     </button>
   </div>
@@ -101,7 +100,7 @@
         to blend creativity with programming.
       </p>
     </div>
-    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c1')">
+    <button type="button" class="btn btn-dark" (click)="goTo('g1', 'c6')">
       chat
     </button>
   </div>
