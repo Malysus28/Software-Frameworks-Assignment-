@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+const listen = require("./listen"); //import the listen.js file to run the server
 
 const app = express();
 const server = http.createServer(app);
@@ -415,8 +416,5 @@ io.on("connection", (socket) => {
       io.to(room).emit("system", { text: `${user.username} left` });
   });
 });
-// start server ----------------------------------------------
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-});
+// start server (using the listen.js file) ----------------------------------------------
+listen(server);
