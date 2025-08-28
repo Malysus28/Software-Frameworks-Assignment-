@@ -1,18 +1,27 @@
+// server/server.js
 const express = require("express");
-const cors = require("cors");
 const http = require("http");
-const app = express();
-app.use(express.json());
-app.use(cors());
+const cors = require("cors");
+const { Server } = require("socket.io");
 
-// user roles
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: ["http://localhost:4200", "http://127.0.0.1:4200", "*"] },
+});
+
+// cors and express
+app.use(cors());
+app.use(express.json());
+
+// user roles to manage AC
 const Roles = {
   SUPER_ADMIN: "super-admin",
   GROUP_ADMIN: "group-admin",
   USER: "user",
 };
 
-// User class defined
+// class for user
 class User {
   constructor({
     id,
@@ -37,7 +46,7 @@ class User {
   }
 }
 
-// hard-coded users ( fake database)
+// hardcoded users
 let users = [
   new User({
     id: "u-100",
@@ -48,7 +57,7 @@ let users = [
     password: "123",
     valid: true,
     roles: [Roles.SUPER_ADMIN],
-    groups: [1, 2, 3],
+    groups: ["g1"],
   }),
   new User({
     id: "u-101",
@@ -59,7 +68,7 @@ let users = [
     password: "123",
     valid: true,
     roles: [Roles.GROUP_ADMIN],
-    groups: [100],
+    groups: ["g1"],
   }),
   new User({
     id: "u-102",
@@ -70,10 +79,10 @@ let users = [
     password: "123",
     valid: true,
     roles: [Roles.USER],
-    groups: [100],
+    groups: [],
   }),
 ];
-//strip password before sending to client
+
 function toSafeUser(u) {
   return {
     id: u.id,
@@ -87,7 +96,29 @@ function toSafeUser(u) {
   };
 }
 
-// define the POST endpoint at api/auth
+// group
+const groups = [
+  {
+    id: "g1",
+    name: "Design Team",
+    createdBy: "u-101", // Alex
+    adminIds: ["u-101"],
+    memberIds: ["u-100", "u-101"], // Bella, Alex
+  },
+];
+
+const channels = [
+  { id: "c1", groupId: "g1", name: "general" },
+  { id: "c2", groupId: "g1", name: "ui-ux" },
+];
+
+// ===== NEW: accept both u1/u-100 style IDs =====
+const ALIAS = { u1: "u-100", u2: "u-101", u3: "u-102" };
+const canonUserId = (id) => ALIAS[id] || id;
+
+// ===== REST =====
+
+// POST /api/auth  { email, password }
 app.post("/api/auth", (req, res) => {
   const email = req.body?.email || "";
   const password = req.body?.password || "";
@@ -98,24 +129,16 @@ app.post("/api/auth", (req, res) => {
       .json({ ok: false, message: "Email and password required" });
   }
 
-  // case-insensitive email, exact password match
-  let foundUser = null;
-  for (let i = 0; i < users.length; i++) {
-    const u = users[i];
-    if (
+  const foundUser = users.find(
+    (u) =>
       u.email.toLowerCase() === String(email).toLowerCase() &&
       u.password === String(password)
-    ) {
-      foundUser = u;
-      break;
-    }
-  }
+  );
 
   if (!foundUser) {
     return res.status(401).json({ ok: false, message: "Invalid credentials" });
   }
 
-  // minimal "token" (email encoded)
   const token = Buffer.from(foundUser.email, "utf8").toString("base64");
 
   return res.json({
@@ -125,8 +148,102 @@ app.post("/api/auth", (req, res) => {
   });
 });
 
-//start server
+// Optional compatibility route
+app.post("/api/auth/login", (req, res) => {
+  const { username, email, password } = req.body || {};
+  let u = null;
+
+  if (username) {
+    u = users.find(
+      (x) => String(x.username).toLowerCase() === String(username).toLowerCase()
+    );
+  }
+  if (!u && email) {
+    u = users.find(
+      (x) => String(x.email).toLowerCase() === String(email).toLowerCase()
+    );
+  }
+  if (!u) return res.status(401).json({ error: "Invalid user" });
+  if (
+    typeof password !== "undefined" &&
+    String(password) !== String(u.password)
+  ) {
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+  return res.json({ user: toSafeUser(u) });
+});
+
+// Groups (optional filter by user)
+app.get("/api/groups", (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.json(groups);
+  const uid = canonUserId(String(userId));
+  const gs = groups.filter(
+    (g) => g.memberIds.includes(uid) || g.adminIds.includes(uid)
+  );
+  res.json(gs);
+});
+
+// Channels in a group
+app.get("/api/groups/:gid/channels", (req, res) => {
+  const { gid } = req.params;
+  res.json(channels.filter((c) => c.groupId === gid));
+});
+
+// sockets
+io.on("connection", (socket) => {
+  console.log("client connected:", socket.id);
+
+  socket.on("join", ({ userId, groupId, channelId }) => {
+    const uid = canonUserId(String(userId));
+    const user = users.find((u) => u.id === uid);
+    const group = groups.find((g) => g.id === groupId);
+    const channel = channels.find(
+      (c) => c.id === channelId && c.groupId === groupId
+    );
+
+    console.log("join payload:", {
+      userId,
+      canonical: uid,
+      groupId,
+      channelId,
+      userFound: !!user,
+      groupFound: !!group,
+      channelFound: !!channel,
+    });
+
+    if (!user || !group || !channel) return;
+
+    const isMember =
+      group.memberIds.includes(uid) || group.adminIds.includes(uid); // NEW
+    if (!isMember) return;
+
+    const room = `${groupId}:${channelId}`;
+    socket.join(room);
+    socket.data.room = room;
+    socket.data.user = { id: user.id, username: user.username };
+
+    io.to(room).emit("system", {
+      text: `${user.username} joined ${channel.name}`,
+    });
+  });
+
+  socket.on("message", ({ text }) => {
+    const room = socket.data.room;
+    const user = socket.data.user;
+    if (!room || !user || !text?.trim()) return;
+    io.to(room).emit("message", { user, text: text.trim(), ts: Date.now() });
+  });
+
+  socket.on("disconnect", () => {
+    const room = socket.data?.room;
+    const user = socket.data?.user;
+    if (room && user)
+      io.to(room).emit("system", { text: `${user.username} left` });
+  });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("API running at http://localhost:" + PORT);
+server.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT}`);
 });
