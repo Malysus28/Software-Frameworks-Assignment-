@@ -20,7 +20,7 @@ const Roles = {
   USER: "user",
 };
 
-// class for user
+// class for user----------------------------------------------
 class User {
   constructor({
     id,
@@ -45,7 +45,7 @@ class User {
   }
 }
 
-// hardcoded users
+// hardcoded users section --------------------------------------
 let users = [
   new User({
     id: "u-100",
@@ -82,20 +82,7 @@ let users = [
   }),
 ];
 
-function toSafeUser(u) {
-  return {
-    id: u.id,
-    username: u.username,
-    birthdate: u.birthdate,
-    age: u.age,
-    email: u.email,
-    valid: u.valid,
-    roles: u.roles,
-    groups: u.groups,
-  };
-}
-
-// group
+// group section ----------------------------------------------
 const groups = [
   {
     id: "g1",
@@ -112,7 +99,7 @@ const groups = [
     memberIds: ["u-103"], //Malees
   },
 ];
-// channels
+// channels section -------------------------------------------
 const channels = [
   { id: "c1", groupId: "g1", name: "Web App Dev 3004ICT" },
   { id: "c2", groupId: "g1", name: "Software Frameworks 3813ICT" },
@@ -120,13 +107,28 @@ const channels = [
   { id: "c4", groupId: "g1", name: "The Ethical Technologist 3410ICT" },
   { id: "c5", groupId: "g1", name: "Interaction Design 3723ICT" },
   { id: "c6", groupId: "g1", name: "Creative Coding 1701ICT" },
-  // { id: "c7", groupId: "g2", name: "Only Students" }, //no card for this yet testing
+  // { id: "c7", groupId: "g2", name: "Only Students" }, //no card for this yet experiment with this later
 ];
 
+// HELPERS section -------------------------------------------
 const ALIAS = { u1: "u-100", u2: "u-101", u3: "u-102" };
 const canonUserId = (id) => ALIAS[id] || id;
 const isSuperAdmin = (u) => u?.roles?.includes(Roles.SUPER_ADMIN);
 const isGroupAdmin = (u) => u?.roles?.includes(Roles.GROUP_ADMIN);
+
+// this function converts a user object to a safe user object
+function toSafeUser(u) {
+  return {
+    id: u.id,
+    username: u.username,
+    birthdate: u.birthdate,
+    age: u.age,
+    email: u.email,
+    valid: u.valid,
+    roles: u.roles,
+    groups: u.groups,
+  };
+}
 
 function getActor(req) {
   const q = req.query?.actorId || req.headers["x-actor-id"];
@@ -134,6 +136,15 @@ function getActor(req) {
   const uid = id ? canonUserId(id) : null;
   return users.find((u) => u.id === uid) || null;
 }
+// this is a simple function to just increment group number like g1-g2
+function nextId(prefix, arr) {
+  const nums = arr
+    .map((x) => Number(String(x.id).replace(`${prefix}`, "")))
+    .filter((n) => !Number.isNaN(n));
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `${prefix}${max + 1}`;
+}
+// AUTH ENDPOINTS section -------------------------------------------
 
 // POST /api/auth  { email, password }
 app.post("/api/auth", (req, res) => {
@@ -157,7 +168,6 @@ app.post("/api/auth", (req, res) => {
   }
 
   const token = Buffer.from(foundUser.email, "utf8").toString("base64");
-
   return res.json({
     ok: true,
     user: toSafeUser(foundUser),
@@ -165,7 +175,7 @@ app.post("/api/auth", (req, res) => {
   });
 });
 
-// Optional compatibility route
+// investinate this, username or email.
 app.post("/api/auth/login", (req, res) => {
   const { username, email, password } = req.body || {};
   let u = null;
@@ -190,7 +200,7 @@ app.post("/api/auth/login", (req, res) => {
   return res.json({ user: toSafeUser(u) });
 });
 
-// group channels
+// group channels----------------------------------
 app.get("/api/groups", (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.json(groups);
@@ -200,6 +210,8 @@ app.get("/api/groups", (req, res) => {
   );
   res.json(gs);
 });
+
+// listing the channels in the group i need to investigate this!
 app.get("/api/groups/:gid/channels", (req, res) => {
   const { gid } = req.params;
   const { userId } = req.query;
@@ -217,7 +229,7 @@ app.get("/api/groups/:gid/channels", (req, res) => {
 
   return res.json(channels.filter((c) => c.groupId === gid));
 });
-// super admin stuff
+// super admin stuff section -------------------------------------------
 
 // Groups (optional filter by user)
 app.get("/api/groups", (req, res) => {
@@ -230,21 +242,6 @@ app.get("/api/groups", (req, res) => {
   res.json(gs);
 });
 
-// Channels in a group
-app.get("/api/groups/:gid/channels", (req, res) => {
-  const { gid } = req.params;
-  res.json(channels.filter((c) => c.groupId === gid));
-});
-
-app.get("/api/users", (req, res) => {
-  const actor = getActor(req);
-  if (!actor || (!isSuperAdmin(actor) && !isGroupAdmin(actor))) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  return res.json(users.map(toSafeUser));
-});
-
-// POST /api/users/:id/promote  body: { role: "group-admin" | "super-admin" }
 app.post("/api/users/:id/promote", (req, res) => {
   const actor = getActor(req);
   if (!actor || !isSuperAdmin(actor)) {
@@ -253,28 +250,34 @@ app.post("/api/users/:id/promote", (req, res) => {
 
   const targetId = canonUserId(String(req.params.id));
   const role = String(req.body?.role || "").toLowerCase();
-
   const target = users.find((u) => u.id === targetId);
   if (!target) return res.status(404).json({ error: "User not found" });
 
   if (role === "group-admin") {
-    if (!target.roles.includes(Roles.GROUP_ADMIN)) {
+    if (!target.roles.includes(Roles.GROUP_ADMIN))
       target.roles.push(Roles.GROUP_ADMIN);
-    }
     return res.json({ ok: true, user: toSafeUser(target) });
   }
 
   if (role === "super-admin") {
-    if (!target.roles.includes(Roles.SUPER_ADMIN)) {
+    if (!target.roles.includes(Roles.SUPER_ADMIN))
       target.roles.push(Roles.SUPER_ADMIN);
-    }
     return res.json({ ok: true, user: toSafeUser(target) });
   }
 
   return res.status(400).json({ error: "Invalid role" });
 });
 
-// DELETE /api/users/:id  (super admin only) — also remove from group admin/member lists
+// list users (both super-admin and group-admin can view)
+app.get("/api/users", (req, res) => {
+  const actor = getActor(req);
+  if (!actor || (!isSuperAdmin(actor) && !isGroupAdmin(actor))) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  return res.json(users.map(toSafeUser));
+});
+
+// ONLY super-admin can delete *users* (global removal)
 app.delete("/api/users/:id", (req, res) => {
   const actor = getActor(req);
   if (!actor || !isSuperAdmin(actor)) {
@@ -287,7 +290,7 @@ app.delete("/api/users/:id", (req, res) => {
 
   const [removed] = users.splice(idx, 1);
 
-  // cleanup from groups
+  // basic cleanup: remove from groups’ adminIds/memberIds
   for (const g of groups) {
     g.memberIds = g.memberIds.filter((id) => id !== targetId);
     g.adminIds = g.adminIds.filter((id) => id !== targetId);
@@ -295,7 +298,70 @@ app.delete("/api/users/:id", (req, res) => {
 
   return res.json({ ok: true, removed: toSafeUser(removed) });
 });
-// sockets
+
+// group admin management section +endpoints
+//create + delete groups (creator-only delete; super-admin override).
+
+app.post("/api/groups", (req, res) => {
+  const actor = getActor(req);
+  if (!actor || !isGroupAdmin(actor)) {
+    return res.status(403).json({ error: "Forbidden: group admin only" });
+  }
+
+  const name = String(req.body?.name || "").trim();
+  if (!name) return res.status(400).json({ error: "Group name required" });
+
+  const newGroup = {
+    id: nextId("g", groups),
+    name,
+    createdBy: actor.id,
+    adminIds: [actor.id],
+    memberIds: [actor.id],
+  };
+  groups.push(newGroup);
+
+  // (Optional) reflect in creator's groups; safe to omit if you prefer
+  if (!actor.groups.includes(newGroup.id)) actor.groups.push(newGroup.id);
+
+  return res.json({ ok: true, group: newGroup });
+});
+
+app.delete("/api/groups/:gid", (req, res) => {
+  const actor = getActor(req);
+  if (!actor || !isGroupAdmin(actor)) {
+    return res.status(403).json({ error: "Forbidden: group admin only" });
+  }
+
+  const gid = String(req.params.gid);
+  const g = groups.find((x) => x.id === gid);
+  if (!g) return res.status(404).json({ error: "Group not found" });
+
+  // Only the creator can delete; super-admins may override
+  if (g.createdBy !== actor.id && !isSuperAdmin(actor)) {
+    return res.status(403).json({
+      error: "Only the creator (or a super admin) can delete this group",
+    });
+  }
+
+  // Remove channels in this group
+  for (let i = channels.length - 1; i >= 0; i--) {
+    if (channels[i].groupId === gid) channels.splice(i, 1);
+  }
+
+  // Remove the group
+  const idx = groups.findIndex((x) => x.id === gid);
+  groups.splice(idx, 1);
+
+  // (Optional) remove group id from each user's groups array
+  for (const u of users) {
+    u.groups = (u.groups || []).filter((id) => id !== gid);
+  }
+
+  return res.json({ ok: true });
+});
+
+// sockets section for chatrooms-------------------------------
+
 io.on("connection", (socket) => {
   console.log("client connected:", socket.id);
 
@@ -349,46 +415,8 @@ io.on("connection", (socket) => {
       io.to(room).emit("system", { text: `${user.username} left` });
   });
 });
-
+// start server ----------------------------------------------
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
-});
-// GROUP ADMIN STUFF
-function nextId(prefix, arr) {
-  const nums = arr
-    .map((x) => Number(String(x.id).replace(`${prefix}`, "")))
-    .filter((n) => !Number.isNaN(n));
-  const max = nums.length ? Math.max(...nums) : 0;
-  return `${prefix}${max + 1}`;
-}
-
-/**
- * POST /api/groups
- * body: { name: string }
- * query/header: actorId (must be a group-admin)
- */
-app.post("/api/groups", (req, res) => {
-  const actor = getActor(req);
-  if (!actor || !isGroupAdmin(actor)) {
-    return res.status(403).json({ error: "Forbidden: group admin only" });
-  }
-
-  const name = String(req.body?.name || "").trim();
-  if (!name) return res.status(400).json({ error: "Group name required" });
-
-  // create the group, with the creator set as admin & member
-  const newGroup = {
-    id: nextId("g", groups),
-    name,
-    createdBy: actor.id,
-    adminIds: [actor.id],
-    memberIds: [actor.id],
-  };
-  groups.push(newGroup);
-
-  // also reflect in the user’s groups list (optional but nice)
-  if (!actor.groups.includes(newGroup.id)) actor.groups.push(newGroup.id);
-
-  return res.json({ ok: true, group: newGroup });
 });

@@ -206,7 +206,7 @@ export class UserSettings implements OnInit {
     const actor = this.user?.id;
     if (!actor) return;
 
-    // ✅ only allow creator to proceed
+    // only allow deleting groups the user created
     if (!this.canDeleteGroup(g)) {
       alert('You can only delete groups you created.');
       return;
@@ -227,6 +227,7 @@ export class UserSettings implements OnInit {
   }
 
   // only creator can delete group
+  // this is not working, i ll come back to this another time.
   canDeleteGroup(g: { createdBy: string }): boolean {
     return this.user?.id === g.createdBy; // only the creator can delete
   }
