@@ -55,7 +55,8 @@ export class Chats implements OnInit {
       // fetch channel name
       this.http
         .get<any[]>(
-          `http://localhost:3000/api/groups/${this.currentGroupId}/channels`
+          `http://localhost:3000/api/groups/${this.currentGroupId}/channels`,
+          { params: { userId: this.currentUserId } }
         )
         .subscribe((list) => {
           const ch = list.find((c) => c.id === this.currentChannelId);

@@ -23,7 +23,6 @@ type SafeUser = {
   styleUrls: ['./profile.css'],
 })
 export class Profile implements OnInit {
-  // ── your existing fields ───────────────────────────────────────────────────
   user: SafeUser | null = null;
   formUser: SafeUser & { password?: string } = {
     id: '',
@@ -39,7 +38,6 @@ export class Profile implements OnInit {
   savedMsg = '';
   showForm = false;
 
-  // ── NEW: super admin panel state ───────────────────────────────────────────
   allUsers: SafeUser[] = [];
   loadingUsers = false;
   errMsg = '';
@@ -64,15 +62,16 @@ export class Profile implements OnInit {
       this.formUser = { ...current };
 
       // If super admin, load all users table
-      if (this.isSuperAdmin()) {
-        this.fetchAllUsers();
-      }
+      this.user = current;
+      this.formUser = { ...current };
     } catch {
       this.router.navigate(['/']);
     }
   }
+  toggleEdit() {
+    this.showForm = !this.showForm;
+  }
 
-  // ── your existing actions ──────────────────────────────────────────────────
   save(): void {
     const raw = localStorage.getItem('currentUser');
     const parsed = raw ? JSON.parse(raw) : {};
@@ -105,96 +104,5 @@ export class Profile implements OnInit {
         password: '',
       };
     }
-  }
-
-  toggleEdit() {
-    this.showForm = !this.showForm;
-  }
-
-  // ── NEW: helpers & API calls for super admin ───────────────────────────────
-  isSuperAdmin(): boolean {
-    return !!this.user?.roles?.includes('super-admin');
-  }
-
-  private actorId(): string | null {
-    return this.user?.id ?? null;
-  }
-
-  fetchAllUsers(): void {
-    const actor = this.actorId();
-    if (!actor) return;
-
-    this.loadingUsers = true;
-    this.errMsg = '';
-    this.http
-      .get<SafeUser[]>('http://localhost:3000/api/users', {
-        params: { actorId: actor },
-      })
-      .subscribe({
-        next: (list) => {
-          this.allUsers = list;
-          this.loadingUsers = false;
-        },
-        error: (e) => {
-          this.errMsg = e?.error?.error || 'Failed to load users';
-          this.loadingUsers = false;
-        },
-      });
-  }
-
-  promoteToGroupAdmin(target: SafeUser): void {
-    const actor = this.actorId();
-    if (!actor) return;
-
-    this.http
-      .post<{ ok: boolean; user: SafeUser }>(
-        `http://localhost:3000/api/users/${target.id}/promote`,
-        { role: 'group-admin' },
-        { params: { actorId: actor } }
-      )
-      .subscribe({
-        next: (res) => {
-          const i = this.allUsers.findIndex((u) => u.id === target.id);
-          if (i > -1) this.allUsers[i] = res.user;
-        },
-        error: (e) => alert(e?.error?.error || 'Promote failed'),
-      });
-  }
-
-  promoteToSuperAdmin(target: SafeUser): void {
-    const actor = this.actorId();
-    if (!actor) return;
-
-    this.http
-      .post<{ ok: boolean; user: SafeUser }>(
-        `http://localhost:3000/api/users/${target.id}/promote`,
-        { role: 'super-admin' },
-        { params: { actorId: actor } }
-      )
-      .subscribe({
-        next: (res) => {
-          const i = this.allUsers.findIndex((u) => u.id === target.id);
-          if (i > -1) this.allUsers[i] = res.user;
-        },
-        error: (e) => alert(e?.error?.error || 'Promote failed'),
-      });
-  }
-
-  removeUser(target: SafeUser): void {
-    const actor = this.actorId();
-    if (!actor) return;
-    if (!confirm(`Remove user "${target.username}"?`)) return;
-
-    this.http
-      .delete<{ ok: boolean; removed: SafeUser }>(
-        `http://localhost:3000/api/users/${target.id}`,
-        { params: { actorId: actor } }
-      )
-      .subscribe({
-        next: () => {
-          this.allUsers = this.allUsers.filter((u) => u.id !== target.id);
-        },
-        error: (e) => alert(e?.error?.error || 'Remove failed'),
-      });
   }
 }

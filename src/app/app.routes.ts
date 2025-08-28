@@ -5,6 +5,7 @@ import { Login } from '../login/login';
 import { Chats } from '../chats/chats';
 import { Channels } from '../channels/channels';
 import { authGuard } from './services/auth/auth-guard';
+import { UserSettings } from './usersettings/usersettings';
 
 // defining the routes for website
 export const routes: Routes = [
@@ -28,4 +29,10 @@ export const routes: Routes = [
     title: 'Channels',
   },
   { path: 'groups/:groupId/channels/:channelId', component: Chats },
+  {
+    path: 'settings',
+    component: UserSettings,
+    title: 'User Settings',
+    canActivate: [authGuard],
+  },
 ];

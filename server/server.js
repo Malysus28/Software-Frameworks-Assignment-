@@ -78,7 +78,7 @@ let users = [
     password: "123",
     valid: true,
     roles: [Roles.USER],
-    groups: [],
+    groups: ["g2"],
   }),
 ];
 
@@ -120,6 +120,7 @@ const channels = [
   { id: "c4", groupId: "g1", name: "The Ethical Technologist 3410ICT" },
   { id: "c5", groupId: "g1", name: "Interaction Design 3723ICT" },
   { id: "c6", groupId: "g1", name: "Creative Coding 1701ICT" },
+  // { id: "c7", groupId: "g2", name: "Only Students" }, //no card for this yet testing
 ];
 
 const ALIAS = { u1: "u-100", u2: "u-101", u3: "u-102" };

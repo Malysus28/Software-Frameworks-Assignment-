@@ -50,6 +50,12 @@
             >Login</a
           >
         </li>
+        <!-- user settings page should only be visible to super admin and group admin -->
+        <li class="nav-item" *ngIf="isSuperAdmin() || isGroupAdmin()">
+          <a class="nav-link" routerLink="/settings" routerLinkActive="active"
+            >User Settings</a
+          >
+        </li>
 
         <li>
           <button (click)="logout()" type="button" class="btn btn-danger">

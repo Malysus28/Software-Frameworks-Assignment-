@@ -1,0 +1,59 @@
+<div class="container mt-4">
+  <h3>Super Admin: User Management</h3>
+
+  <div *ngIf="errMsg" class="alert alert-danger my-2">{{ errMsg }}</div>
+
+  <button
+    class="btn btn-outline-secondary mb-3"
+    (click)="fetchAllUsers()"
+    [disabled]="loadingUsers"
+  >
+    {{ loadingUsers ? "Loading…" : "Refresh Users" }}
+  </button>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Roles</th>
+          <th>Groups</th>
+          <th style="width: 300px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of allUsers">
+          <td>{{ u.username }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.roles.join(", ") }}</td>
+          <td>{{ (u.groups || []).join(", ") || "—" }}</td>
+          <td>
+            <div class="btn-group btn-group-sm">
+              <button
+                class="btn btn-outline-primary"
+                (click)="promoteToGroupAdmin(u)"
+                [disabled]="u.roles.includes('group-admin')"
+              >
+                Promote to Group Admin
+              </button>
+              <button
+                class="btn btn-outline-warning"
+                (click)="promoteToSuperAdmin(u)"
+                [disabled]="u.roles.includes('super-admin')"
+              >
+                Promote to Super Admin
+              </button>
+              <button class="btn btn-outline-danger" (click)="removeUser(u)">
+                Remove
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="!loadingUsers && allUsers?.length === 0">
+          <td colspan="5" class="text-muted">No users to display.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
