@@ -99,10 +99,17 @@ function toSafeUser(u) {
 const groups = [
   {
     id: "g1",
-    name: "Design Team",
+    name: "staff",
     createdBy: "u-101", // Alex
     adminIds: ["u-101"],
     memberIds: ["u-100", "u-101"], // Bella, Alex
+  },
+  {
+    id: "g2",
+    name: "students",
+    createdBy: "u-101", // Alex
+    adminIds: ["u-101"],
+    memberIds: ["u-103"], //Malees
   },
 ];
 // channels
@@ -117,6 +124,15 @@ const channels = [
 
 const ALIAS = { u1: "u-100", u2: "u-101", u3: "u-102" };
 const canonUserId = (id) => ALIAS[id] || id;
+const isSuperAdmin = (u) => u?.roles?.includes(Roles.SUPER_ADMIN);
+const isGroupAdmin = (u) => u?.roles?.includes(Roles.GROUP_ADMIN);
+
+function getActor(req) {
+  const q = req.query?.actorId || req.headers["x-actor-id"];
+  const id = q ? String(q) : null;
+  const uid = id ? canonUserId(id) : null;
+  return users.find((u) => u.id === uid) || null;
+}
 
 // POST /api/auth  { email, password }
 app.post("/api/auth", (req, res) => {
@@ -173,6 +189,35 @@ app.post("/api/auth/login", (req, res) => {
   return res.json({ user: toSafeUser(u) });
 });
 
+// group channels
+app.get("/api/groups", (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.json(groups);
+  const uid = canonUserId(String(userId));
+  const gs = groups.filter(
+    (g) => g.memberIds.includes(uid) || g.adminIds.includes(uid)
+  );
+  res.json(gs);
+});
+app.get("/api/groups/:gid/channels", (req, res) => {
+  const { gid } = req.params;
+  const { userId } = req.query;
+
+  if (!userId) return res.status(400).json({ error: "userId is required" });
+  const uid = canonUserId(String(userId));
+
+  const group = groups.find((g) => g.id === gid);
+  if (!group) return res.status(404).json({ error: "Group not found" });
+
+  const isMember =
+    group.memberIds.includes(uid) || group.adminIds.includes(uid);
+  if (!isMember)
+    return res.status(403).json({ error: "Not a member of this group" });
+
+  return res.json(channels.filter((c) => c.groupId === gid));
+});
+// super admin stuff
+
 // Groups (optional filter by user)
 app.get("/api/groups", (req, res) => {
   const { userId } = req.query;
@@ -190,27 +235,81 @@ app.get("/api/groups/:gid/channels", (req, res) => {
   res.json(channels.filter((c) => c.groupId === gid));
 });
 
+app.get("/api/users", (req, res) => {
+  const actor = getActor(req);
+  if (!actor || !isSuperAdmin(actor)) {
+    return res.status(403).json({ error: "Forbidden: super admin only" });
+  }
+  return res.json(users.map(toSafeUser));
+});
+
+// POST /api/users/:id/promote  body: { role: "group-admin" | "super-admin" }
+app.post("/api/users/:id/promote", (req, res) => {
+  const actor = getActor(req);
+  if (!actor || !isSuperAdmin(actor)) {
+    return res.status(403).json({ error: "Forbidden: super admin only" });
+  }
+
+  const targetId = canonUserId(String(req.params.id));
+  const role = String(req.body?.role || "").toLowerCase();
+
+  const target = users.find((u) => u.id === targetId);
+  if (!target) return res.status(404).json({ error: "User not found" });
+
+  if (role === "group-admin") {
+    if (!target.roles.includes(Roles.GROUP_ADMIN)) {
+      target.roles.push(Roles.GROUP_ADMIN);
+    }
+    return res.json({ ok: true, user: toSafeUser(target) });
+  }
+
+  if (role === "super-admin") {
+    if (!target.roles.includes(Roles.SUPER_ADMIN)) {
+      target.roles.push(Roles.SUPER_ADMIN);
+    }
+    return res.json({ ok: true, user: toSafeUser(target) });
+  }
+
+  return res.status(400).json({ error: "Invalid role" });
+});
+
+// DELETE /api/users/:id  (super admin only) — also remove from group admin/member lists
+app.delete("/api/users/:id", (req, res) => {
+  const actor = getActor(req);
+  if (!actor || !isSuperAdmin(actor)) {
+    return res.status(403).json({ error: "Forbidden: super admin only" });
+  }
+
+  const targetId = canonUserId(String(req.params.id));
+  const idx = users.findIndex((u) => u.id === targetId);
+  if (idx === -1) return res.status(404).json({ error: "User not found" });
+
+  const [removed] = users.splice(idx, 1);
+
+  // cleanup from groups
+  for (const g of groups) {
+    g.memberIds = g.memberIds.filter((id) => id !== targetId);
+    g.adminIds = g.adminIds.filter((id) => id !== targetId);
+  }
+
+  return res.json({ ok: true, removed: toSafeUser(removed) });
+});
 // sockets
 io.on("connection", (socket) => {
   console.log("client connected:", socket.id);
 
   socket.on("join", ({ userId, groupId, channelId }) => {
+    if (socket.data?.room) {
+      socket.leave(socket.data.room);
+      socket.data.room = null;
+    }
+
     const uid = canonUserId(String(userId));
     const user = users.find((u) => u.id === uid);
     const group = groups.find((g) => g.id === groupId);
     const channel = channels.find(
       (c) => c.id === channelId && c.groupId === groupId
     );
-
-    console.log("join payload:", {
-      userId,
-      canonical: uid,
-      groupId,
-      channelId,
-      userFound: !!user,
-      groupFound: !!group,
-      channelFound: !!channel,
-    });
 
     if (!user || !group || !channel) return;
 

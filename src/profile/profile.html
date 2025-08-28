@@ -1,97 +1,168 @@
 <p class="profile">Profile Page</p>
 
 <!-- bootstrap card profile  -->
-<div class="card" style="width: 18rem">
-  <img src="./Dog.jpg" class="card-img-top" alt="..." />
-  <div class="card-body">
-    <h5 class="card-title">Hello {{ user.username }}</h5>
+<div class="row mt-3">
+  <!-- LEFT: profile card -->
+  <div class="col-md-6">
+    <div class="card" style="width: 18rem">
+      <img src="./Dog.jpg" class="card-img-top" alt="..." />
+      <div class="card-body"></div>
+
+      <!-- list items retrieved from the storage -->
+      <div *ngIf="user">
+        <ul class="list-group" style="max-width: 480px">
+          <li class="list-group-item"><b>Username:</b> {{ user.username }}</li>
+          <li class="list-group-item">
+            <b>Birthdate:</b> {{ user.birthdate }}
+          </li>
+          <li class="list-group-item"><b>Age:</b> {{ user.age }}</li>
+          <li class="list-group-item"><b>Email:</b> {{ user.email }}</li>
+          <li class="list-group-item">
+            <b>Roles:</b> {{ user.roles?.join(", ") }}
+          </li>
+          <li class="list-group-item">
+            <b>Groups:</b>
+            {{ user.groups?.length ? user.groups.join(", ") : "None" }}
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- toggle button -->
+    <div class="mt-3">
+      <button
+        class="btn btn-outline-primary"
+        type="button"
+        (click)="toggleEdit()"
+      >
+        {{ showForm ? "Close" : "Edit Profile" }}
+      </button>
+    </div>
   </div>
 
-  <!-- list items retrieved from the storage -->
-  <div *ngIf="user">
-    <ul class="list-group" style="max-width: 480px">
-      <li class="list-group-item"><b>Username:</b> {{ user.username }}</li>
-      <li class="list-group-item"><b>Birthdate:</b> {{ user.birthdate }}</li>
-      <li class="list-group-item"><b>Age:</b> {{ user.age }}</li>
-      <li class="list-group-item"><b>Email:</b> {{ user.email }}</li>
-      <li class="list-group-item">
-        <b>Roles:</b> {{ user.roles?.join(", ") }}
-      </li>
-      <li class="list-group-item">
-        <b>Groups:</b>
-        {{ user.groups?.length ? user.groups.join(", ") : "None" }}
-      </li>
-    </ul>
+  <!-- ✅ CHANGE: move form into a right-side column -->
+  <div class="col-md-6" *ngIf="showForm">
+    <h3 class="h5 mb-3">Update Profile Info</h3>
+    <form (ngSubmit)="save()">
+      <div class="mb-2">
+        <label class="form-label">Username</label>
+        <input
+          class="form-control"
+          name="username"
+          [(ngModel)]="formUser.username"
+        />
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label">Birthdate</label>
+        <input
+          class="form-control"
+          type="date"
+          name="birthdate"
+          [(ngModel)]="formUser.birthdate"
+        />
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label">Age</label>
+        <input
+          class="form-control"
+          type="number"
+          name="age"
+          [(ngModel)]="formUser.age"
+        />
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label">Email</label>
+        <input
+          class="form-control"
+          type="email"
+          name="email"
+          [(ngModel)]="formUser.email"
+        />
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label">Password</label>
+        <input
+          class="form-control"
+          type="password"
+          name="password"
+          [(ngModel)]="formUser.password"
+        />
+      </div>
+
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn btn-secondary ms-2" type="button" (click)="reset()">
+        Reset
+      </button>
+
+      <div class="alert alert-success mt-3" [hidden]="!savedMsg">
+        {{ savedMsg }}
+      </div>
+    </form>
   </div>
 </div>
 
-<!-- toggle button -->
-<div class="mt-3">
-  <button class="btn btn-outline-primary" type="button" (click)="toggleEdit()">
-    {{ showForm ? "Close" : "Edit Profile" }}
+<!-- super admin section below, this only appears if someone is a superadmin  -->
+<div *ngIf="isSuperAdmin()" class="mt-4">
+  <h3>Super Admin: User Management</h3>
+
+  <div *ngIf="errMsg" class="alert alert-danger my-2">{{ errMsg }}</div>
+
+  <button
+    class="btn btn-outline-secondary mb-3"
+    (click)="fetchAllUsers()"
+    [disabled]="loadingUsers"
+  >
+    {{ loadingUsers ? "Loading…" : "Refresh Users" }}
   </button>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Roles</th>
+          <th>Groups</th>
+          <th style="width: 300px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of allUsers">
+          <td>{{ u.username }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.roles?.join(", ") }}</td>
+          <td>{{ (u.groups || []).join(", ") || "—" }}</td>
+          <td>
+            <div class="btn-group btn-group-sm">
+              <button
+                class="btn btn-outline-primary"
+                (click)="promoteToGroupAdmin(u)"
+                [disabled]="u.roles?.includes('group-admin')"
+              >
+                Promote to Group Admin
+              </button>
+              <button
+                class="btn btn-outline-warning"
+                (click)="promoteToSuperAdmin(u)"
+                [disabled]="u.roles?.includes('super-admin')"
+              >
+                Promote to Super Admin
+              </button>
+              <button class="btn btn-outline-danger" (click)="removeUser(u)">
+                Remove
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="!loadingUsers && allUsers?.length === 0">
+          <td colspan="5" class="text-muted">No users to display.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
-
-<!-- update info section(form) -->
-<div *ngIf="showForm" style="max-width: 22rem; margin-top: 1rem">
-  <h3 class="h5 mb-3">Update Profile Info</h3>
-  <form (ngSubmit)="save()">
-    <div class="mb-2">
-      <label class="form-label">Username</label>
-      <input
-        class="form-control"
-        name="username"
-        [(ngModel)]="formUser.username"
-      />
-    </div>
-
-    <div class="mb-2">
-      <label class="form-label">Birthdate</label>
-      <input
-        class="form-control"
-        type="date"
-        name="birthdate"
-        [(ngModel)]="formUser.birthdate"
-      />
-    </div>
-
-    <div class="mb-2">
-      <label class="form-label">Age</label>
-      <input
-        class="form-control"
-        type="number"
-        name="age"
-        [(ngModel)]="formUser.age"
-      />
-    </div>
-
-    <div class="mb-2">
-      <label class="form-label">Email</label>
-      <input
-        class="form-control"
-        type="email"
-        name="email"
-        [(ngModel)]="formUser.email"
-      />
-    </div>
-
-    <div class="mb-2">
-      <label class="form-label">Password</label>
-      <input
-        class="form-control"
-        type="password"
-        name="password"
-        [(ngModel)]="formUser.password"
-      />
-    </div>
-
-    <button class="btn btn-primary" type="submit">Save</button>
-    <button class="btn btn-secondary ms-2" type="button" (click)="reset()">
-      Reset
-    </button>
-
-    <div class="alert alert-success mt-3" [hidden]="!savedMsg">
-      {{ savedMsg }}
-    </div>
-  </form>
-</div>
+<!-- super admin section ends -->
